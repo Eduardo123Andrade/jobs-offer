@@ -1,0 +1,38 @@
+# Dev and prod databases run side by side on different ports.
+# Prod uses an *external* volume: `docker compose down -v` never deletes it.
+services:
+  db-dev:
+    image: postgres:17-alpine
+    container_name: jobs-offer-db-dev
+    environment:
+      POSTGRES_USER: jobs
+      POSTGRES_PASSWORD: jobs
+      POSTGRES_DB: jobs_offer_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    healthcheck: &healthcheck
+      test: ["CMD-SHELL", "pg_isready -U jobs -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  db-prod:
+    image: postgres:17-alpine
+    container_name: jobs-offer-db-prod
+    environment:
+      POSTGRES_USER: jobs
+      POSTGRES_PASSWORD: jobs-prod
+      POSTGRES_DB: jobs_offer_prod
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-prod:/var/lib/postgresql/data
+    healthcheck: *healthcheck
+
+volumes:
+  pgdata-dev:
+  pgdata-prod:
+    external: true
+    name: jobs-offer-pgdata-prod

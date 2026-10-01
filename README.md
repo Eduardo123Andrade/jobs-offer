@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jobs Offer — dashboard de aplicações
 
-## Getting Started
+Dashboard local (sem login) para acompanhar candidaturas a vagas. Next.js (App Router) com frontend e API REST no mesmo projeto, PostgreSQL via Docker e Drizzle ORM.
 
-First, run the development server:
+## Rodando
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev     # banco de DEV + next dev   → http://localhost:3000
+pnpm prod    # banco de PROD + build/start → http://localhost:3002
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Cada comando sobe o container do seu banco, aplica as migrations e inicia o Next. **Ctrl+C** encerra o Next e para o container daquele ambiente (os dados ficam no volume).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| | Dev | Prod |
+| --- | --- | --- |
+| Container | `jobs-offer-db-dev` (porta 5434) | `jobs-offer-db-prod` (porta 5435) |
+| Banco | `jobs_offer_dev` | `jobs_offer_prod` |
+| Env | `.env.development` | `.env.production` |
+| Dados fake | 40 aplicações inseridas automaticamente se o banco estiver vazio | nunca |
+| Reset | `pnpm db:reset` | bloqueado |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O banco de prod usa um volume Docker **externo** (`jobs-offer-pgdata-prod`): nem `docker compose down -v` o apaga. Os scripts de seed/reset recusam rodar em qualquer banco que não seja `jobs_offer_dev`.
 
-## Learn More
+| Script | O que faz |
+| --- | --- |
+| `pnpm db:generate` | Gera migration após alterar `src/db/schema.ts` |
+| `pnpm db:migrate` | Aplica migrations no dev (`pnpm dev`/`pnpm prod` já fazem isso sozinhos) |
+| `pnpm db:seed` | Substitui os dados do dev por dados fake |
+| `pnpm db:reset` | Recria o schema do dev do zero + seed |
+| `pnpm db:studio` | Drizzle Studio no banco de dev (com o container rodando) |
 
-To learn more about Next.js, take a look at the following resources:
+## Funcionalidades
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Campos:** link da vaga, plataforma, status, data da aplicação, localização, modelo de trabalho, empresa/cargo e salário (opcionais), contato, notas, data de follow-up.
+- **Filtros (na URL):** status (múltiplos), período, localização, plataforma, modelo, busca textual, follow-up pendente / paradas.
+- **Métricas:** totais, taxa de resposta, % que chegou à entrevista, gráficos por semana / status / plataforma — refletem os filtros ativos.
+- **Follow-up:** destaque para follow-ups vencidos e aplicações abertas sem mudança de status há 14+ dias (`STALE_AFTER_DAYS` em `src/lib/constants.ts`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Método | Rota | |
+| --- | --- | --- |
+| GET | `/api/applications?status=applied,interview&from=2026-01-01&to=…&location=…&platform=…&workModel=remote&q=…&followUp=due\|stale` | Lista com filtros |
+| POST | `/api/applications` | Cria |
+| GET / PATCH / DELETE | `/api/applications/:id` | Lê / atualiza parcialmente / remove |
+| GET | `/api/stats?<mesmos filtros>` | Métricas |
