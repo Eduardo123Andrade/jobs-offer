@@ -53,6 +53,8 @@ export function ApplicationForm({ open, onClose, application, platforms, locatio
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const [scrape, setScrape] = useState<ScrapeState>({ kind: "idle" });
+  // Bumped on every open so the (uncontrolled) form remounts empty / with the current defaults.
+  const [session, setSession] = useState(0);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -61,6 +63,7 @@ export function ApplicationForm({ open, onClose, application, platforms, locatio
       setErrors({});
       setFormError(null);
       setScrape({ kind: "idle" });
+      setSession((s) => s + 1);
       dialog.showModal();
     } else if (!open && dialog.open) {
       dialog.close();
@@ -126,7 +129,7 @@ export function ApplicationForm({ open, onClose, application, platforms, locatio
       className="m-auto w-[min(720px,calc(100vw-2rem))] rounded-xl border border-border bg-surface p-0 text-foreground backdrop:bg-black/50"
     >
       {/* key resets uncontrolled inputs whenever the target application changes */}
-      <form ref={formRef} key={a?.id ?? "new"} onSubmit={onSubmit} className="flex max-h-[85vh] flex-col">
+      <form ref={formRef} key={`${a?.id ?? "new"}-${session}`} onSubmit={onSubmit} className="flex max-h-[85vh] flex-col">
         <header className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-base font-semibold">{a ? "Editar aplicação" : "Nova aplicação"}</h2>
           <button type="button" onClick={onClose} className="text-muted hover:text-foreground" aria-label="Fechar">
