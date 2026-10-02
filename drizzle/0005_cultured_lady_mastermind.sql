@@ -1,0 +1,1 @@
+ALTER TABLE "profile_notes" ADD COLUMN "use_in_cv" boolean DEFAULT true NOT NULL;

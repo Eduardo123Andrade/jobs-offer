@@ -1,4 +1,4 @@
-import { date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { STATUSES, WORK_MODELS } from "@/lib/constants";
 
 export const statusEnum = pgEnum("application_status", STATUSES);
@@ -41,6 +41,8 @@ export const profileNotes = pgTable("profile_notes", {
   id: serial("id").primaryKey(),
   title: text("title").notNull().default(""),
   content: text("content").notNull().default(""),
+  /** Counts as a fact the CV-tailoring AI may use (and the anti-fabrication check accepts). */
+  useInCv: boolean("use_in_cv").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

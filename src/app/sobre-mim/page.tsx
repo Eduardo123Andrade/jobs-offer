@@ -19,7 +19,8 @@ export default async function AboutMe() {
         <h1 className="text-xl font-semibold tracking-tight">Sobre mim</h1>
         <p className="text-sm text-muted">
           Anotações livres para ter à mão nas candidaturas: pitch, pontos fortes, histórias, respostas para perguntas comuns.
-          Tudo é salvo automaticamente.
+          Tudo é salvo automaticamente. Blocos marcados com &quot;Usar no CV adaptado&quot; entram como fatos para a IA ao
+          adaptar seu CV, então escreva neles só o que é verdade. Desmarque os pessoais (pretensão salarial, motivos de saída…).
         </p>
       </header>
       <ProfileNotes initial={notes} />

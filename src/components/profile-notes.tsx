@@ -49,25 +49,36 @@ function NoteCard({ note, autoFocus, onDelete }: { note: ProfileNote; autoFocus:
   const [content, setContent] = useState(note.content);
   const [state, setState] = useState<SaveState>("idle");
   const [copied, setCopied] = useState(false);
+  const [useInCv, setUseInCv] = useState(note.useInCv);
   // Last values persisted on the server, to skip no-op saves on blur.
   const [saved, setSaved] = useState({ title: note.title, content: note.content });
 
-  async function save() {
-    const patch = { title, content };
-    if (patch.title === saved.title && patch.content === saved.content) return;
+  async function patch(body: Record<string, unknown>) {
     setState("saving");
     try {
       const res = await fetch(`/api/profile-notes/${note.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
-      setSaved(patch);
       setState("saved");
+      return true;
     } catch {
       setState("error");
+      return false;
     }
+  }
+
+  async function save() {
+    const text = { title, content };
+    if (text.title === saved.title && text.content === saved.content) return;
+    if (await patch(text)) setSaved(text);
+  }
+
+  async function toggleUseInCv(next: boolean) {
+    setUseInCv(next);
+    if (!(await patch({ useInCv: next }))) setUseInCv(!next);
   }
 
   async function copy() {
@@ -79,7 +90,7 @@ function NoteCard({ note, autoFocus, onDelete }: { note: ProfileNote; autoFocus:
   const dirty = title !== saved.title || content !== saved.content;
 
   return (
-    <article className="card space-y-2 p-4" onBlur={save}>
+    <article className={`card space-y-2 p-4 ${useInCv ? "" : "border-dashed"}`} onBlur={save}>
       <div className="flex items-center gap-2">
         <input
           className="min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:text-muted"
@@ -104,6 +115,13 @@ function NoteCard({ note, autoFocus, onDelete }: { note: ProfileNote; autoFocus:
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
+      <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted select-none">
+        <input type="checkbox" className="accent-accent" checked={useInCv} onChange={(e) => toggleUseInCv(e.target.checked)} />
+        Usar no CV adaptado
+        <span className="opacity-70">
+          {useInCv ? "— a IA pode usar este texto como fato sobre você" : "— anotação pessoal, a IA não vê"}
+        </span>
+      </label>
     </article>
   );
 }

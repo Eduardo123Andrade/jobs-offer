@@ -122,7 +122,7 @@ export function TailorCv({ applicationId, cvPath, hasJobText, analysis, tailored
         ) : (
           <div className="space-y-2 text-sm">
             <Chips label="Você tem" items={analysis.matched} tone="ok" />
-            <Chips label="Você tem (está no outro CV, a IA vai incluir)" items={analysis.fromOtherCv} tone="info" />
+            <Chips label="Você tem (no outro CV ou no Sobre mim, a IA vai incluir)" items={analysis.fromOtherCv} tone="info" />
             <Chips label="Você não tem (não entra no CV)" items={analysis.missing} tone="missing" />
           </div>
         )}

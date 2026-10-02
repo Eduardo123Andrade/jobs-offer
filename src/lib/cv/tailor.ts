@@ -106,7 +106,7 @@ function buildContext(cv: string, facts: string, jobText: string, a: Application
   return [
     "=== BASE CV (markdown, the one to tailor) ===",
     cv,
-    "=== CANDIDATE FACTS (all CV versions; the ONLY source of truth about the candidate) ===",
+    "=== CANDIDATE FACTS (all CV versions + the candidate's own notes; the ONLY source of truth about the candidate) ===",
     facts,
     "=== JOB POSTING ===",
     [a.company && `Company: ${a.company}`, a.role && `Role: ${a.role}`].filter(Boolean).join("\n"),
@@ -128,7 +128,7 @@ HARD RULES (a program verifies them and rejects violations):
 WHAT YOU SHOULD DO to raise the ATS match:
 - Rewrite the summary to lead with the facts most relevant to this job, using the posting's own wording where it describes something the candidate really did.
 - Reorder skill lines and the items inside them so the job's keywords come first. Matched keywords: ${an.matched.join(", ") || "(none)"}.
-- These keywords are true per another CV version and should be included where they fit: ${an.fromOtherCv.join(", ") || "(none)"}.
+- These keywords are true per another CV version or the candidate's notes and should be included where they fit: ${an.fromOtherCv.join(", ") || "(none)"}.
 - Reorder bullets inside each experience (most relevant first) and rephrase them with the posting's terminology, without changing their meaning or numbers.
 
 ALSO, for each technology in [${an.missing.join(", ")}], write an interview/cover-letter note (in ${lang}) explaining honestly that the candidate has not used it professionally, and which concrete experience from CANDIDATE FACTS will make learning it fast (similar concepts, ecosystem, patterns). Plus a short study plan focused on what differs from what they already know.

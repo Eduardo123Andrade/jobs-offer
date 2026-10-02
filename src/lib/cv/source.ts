@@ -1,10 +1,11 @@
 import "server-only";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { listCvNotes } from "@/lib/profile-notes";
 import type { CvLanguage } from "./analyze";
 
-// Personal files, kept out of git (see .gitignore). Both languages together are the "facts":
-// anything true in either CV may appear in a tailored one.
+// Personal files, kept out of git (see .gitignore). Both languages plus the "Sobre mim" blocks marked
+// "usar no CV" are the "facts": anything stated in any of them may appear in a tailored CV.
 export const CV_DIR = path.resolve(process.env.CV_DIR ?? path.join(process.cwd(), "cv"));
 const FILES: Record<CvLanguage, string> = { en: "cv-en.md", pt: "cv-pt.md" };
 
@@ -19,7 +20,7 @@ async function tryRead(file: string) {
 }
 
 export async function loadCv(language: CvLanguage): Promise<CvSource> {
-  const [en, pt] = await Promise.all([tryRead(FILES.en), tryRead(FILES.pt)]);
+  const [en, pt, notes] = await Promise.all([tryRead(FILES.en), tryRead(FILES.pt), listCvNotes()]);
   const wanted = language === "en" ? en : pt;
   const fallback = language === "en" ? pt : en;
   const markdown = wanted ?? fallback;
@@ -27,7 +28,7 @@ export async function loadCv(language: CvLanguage): Promise<CvSource> {
   return {
     language: wanted ? language : language === "en" ? "pt" : "en",
     markdown,
-    facts: [en, pt].filter(Boolean).join("\n\n"),
+    facts: [en, pt, notesAsMarkdown(notes)].filter(Boolean).join("\n\n"),
   };
 }
 
@@ -77,4 +78,10 @@ export async function saveTailoredPdf(applicationId: number, company: string | n
   await mkdir(path.join(CV_DIR, "aplicacoes"), { recursive: true });
   await writeFile(path.join(CV_DIR, relative), pdf);
   return relative;
+}
+
+function notesAsMarkdown(notes: { title: string; content: string }[]) {
+  if (!notes.length) return "";
+  // "####" so these never count as experience headings ("### ") in the anti-fabrication check.
+  return ["## Sobre mim (anotações do candidato)", ...notes.map((n) => `#### ${n.title || "Sem título"}\n${n.content}`)].join("\n\n");
 }

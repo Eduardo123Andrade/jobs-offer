@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { profileNotes } from "@/db/schema";
 import type { ProfileNoteInput } from "./validation";
@@ -25,4 +25,13 @@ export async function updateProfileNote(id: number, input: Partial<ProfileNoteIn
 export async function deleteProfileNote(id: number) {
   const rows = await db.delete(profileNotes).where(eq(profileNotes.id, id)).returning({ id: profileNotes.id });
   return rows.length > 0;
+}
+
+/** Notes the user marked as usable by the CV-tailoring AI (empty ones skipped). */
+export async function listCvNotes() {
+  return db
+    .select()
+    .from(profileNotes)
+    .where(and(eq(profileNotes.useInCv, true), ne(profileNotes.content, "")))
+    .orderBy(asc(profileNotes.createdAt), asc(profileNotes.id));
 }

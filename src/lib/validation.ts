@@ -79,11 +79,12 @@ export function parseFilters(source: ParamSource): Filters {
   return result.success ? result.data : filtersSchema.parse({});
 }
 
-const profileNoteFields = { title: z.string().trim().max(200), content: z.string() };
+const profileNoteFields = { title: z.string().trim().max(200), content: z.string(), useInCv: z.boolean() };
 
 export const profileNoteInput = z.object({
   title: profileNoteFields.title.default(""),
   content: profileNoteFields.content.default(""),
+  useInCv: profileNoteFields.useInCv.default(true),
 });
 
 // Built without defaults: .partial() would still fill omitted fields with "" and wipe them.
