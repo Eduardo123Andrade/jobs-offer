@@ -33,3 +33,14 @@ export const applications = pgTable(
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
+
+/** Free-form notes about the user (pitch, strengths, answers to common questions...). */
+export const profileNotes = pgTable("profile_notes", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  content: text("content").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ProfileNote = typeof profileNotes.$inferSelect;

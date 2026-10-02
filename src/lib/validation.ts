@@ -77,3 +77,15 @@ export function parseFilters(source: ParamSource): Filters {
   });
   return result.success ? result.data : filtersSchema.parse({});
 }
+
+const profileNoteFields = { title: z.string().trim().max(200), content: z.string() };
+
+export const profileNoteInput = z.object({
+  title: profileNoteFields.title.default(""),
+  content: profileNoteFields.content.default(""),
+});
+
+// Built without defaults: .partial() would still fill omitted fields with "" and wipe them.
+export const profileNotePatch = z.object(profileNoteFields).partial();
+
+export type ProfileNoteInput = z.infer<typeof profileNoteInput>;

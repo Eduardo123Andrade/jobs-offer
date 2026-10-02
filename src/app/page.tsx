@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { Charts } from "@/components/charts";
 import { ApplicationsSection } from "@/components/dashboard";
@@ -20,9 +21,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight">Minhas aplicações</h1>
-        <p className="text-sm text-muted">Acompanhe vagas, status e follow-ups. Métricas refletem os filtros ativos.</p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Minhas aplicações</h1>
+          <p className="text-sm text-muted">Acompanhe vagas, status e follow-ups. Métricas refletem os filtros ativos.</p>
+        </div>
+        <Link href="/sobre-mim" className="btn-ghost shrink-0">
+          Sobre mim
+        </Link>
       </header>
 
       <Suspense>
