@@ -1,8 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { CvAnalysis, CvBridge } from "@/db/schema";
+import { progressLabel, type CvProgress, type CvStreamLine } from "@/lib/cv/progress";
+
+type Step = { event: CvProgress; elapsedMs: number };
 
 type Tailored = {
   html: string;
@@ -30,18 +33,55 @@ export function TailorCv({ applicationId, cvPath, hasJobText, analysis, tailored
   const [error, setError] = useState<{ message: string; violations?: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
   const [, startTransition] = useTransition();
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(0);
+
+  // Ticking clock while generating, so a slow model still visibly "moves".
+  useEffect(() => {
+    if (!generating) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [generating]);
 
   async function generate() {
+    const start = Date.now();
     setGenerating(true);
     setError(null);
+    setSteps([]);
+    setStartedAt(start);
+    setNow(start);
     try {
       const res = await fetch(`/api/applications/${applicationId}/tailored-cv`, { method: "POST" });
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
-        setError({ message: body.error ?? `Erro ${res.status}`, violations: body.violations });
+        setError({ message: body.error ?? `Erro ${res.status}` });
         return;
       }
-      startTransition(() => router.refresh());
+      // NDJSON: one CvStreamLine per line, arriving as the server progresses.
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      let finished = false;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const raw of lines) {
+          if (!raw.trim()) continue;
+          const line = JSON.parse(raw) as CvStreamLine;
+          if (line.type === "progress") setSteps((s) => [...s, { event: line.event, elapsedMs: line.elapsedMs }]);
+          else if (line.type === "error") {
+            finished = true;
+            setError({ message: line.error, violations: line.violations });
+          } else {
+            finished = true;
+            startTransition(() => router.refresh());
+          }
+        }
+      }
+      if (!finished) setError({ message: "A conexão terminou antes do fim da geração." });
     } catch {
       setError({ message: "Falha de conexão com o servidor." });
     } finally {
@@ -105,7 +145,7 @@ export function TailorCv({ applicationId, cvPath, hasJobText, analysis, tailored
             {!hasJobText
               ? "Adicione a descrição da vaga na aplicação para poder adaptar."
               : generating
-                ? "Pode levar de 20s a alguns minutos."
+                ? `${formatSeconds(now - (startedAt ?? now))} — pode levar de 20s a alguns minutos.`
                 : tailored
                   ? `Gerado em ${new Date(tailored.createdAt).toLocaleString("pt-BR")}`
                   : ""}
@@ -116,6 +156,8 @@ export function TailorCv({ applicationId, cvPath, hasJobText, analysis, tailored
             </a>
           )}
         </div>
+
+        {steps.length > 0 && <ProgressLog steps={steps} running={generating} />}
 
         {error && (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm">
@@ -224,5 +266,27 @@ function Chips({ label, items, tone }: { label: string; items: string[]; tone: k
         </span>
       ))}
     </div>
+  );
+}
+
+const formatSeconds = (ms: number) => `${Math.max(0, Math.round(ms / 1000))}s`;
+
+const PROBLEM_STEPS: CvProgress["step"][] = ["ai-failed", "invalid-json", "rejected"];
+
+function ProgressLog({ steps, running }: { steps: Step[]; running: boolean }) {
+  return (
+    <ol className="space-y-1 rounded-md border border-border bg-background p-3 text-xs" aria-live="polite">
+      {steps.map((s, i) => {
+        const current = running && i === steps.length - 1;
+        const problem = PROBLEM_STEPS.includes(s.event.step);
+        return (
+          <li key={i} className={`flex gap-2 ${problem ? "text-amber-600 dark:text-amber-400" : current ? "" : "text-muted"}`}>
+            <span className="w-4 shrink-0 text-center">{current ? <span className="inline-block animate-spin">◌</span> : problem ? "!" : "✓"}</span>
+            <span className="w-10 shrink-0 tabular-nums">{formatSeconds(s.elapsedMs)}</span>
+            <span className="min-w-0 break-words">{progressLabel(s.event)}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { applications, tailoredCvs, type Application, type CvBridge } from "@/db/schema";
 import { analyzeFit, detectLanguage } from "./analyze";
 import { askGemini, parseJsonAnswer } from "./gemini";
+import type { CvProgress } from "./progress";
 import { cvDocument, renderPdf } from "./pdf";
 import { cvHeader, loadCv, saveTailoredPdf, withHeader } from "./source";
 import { findBridgeFabrications, findFabrications } from "./validate";
@@ -32,11 +33,12 @@ export class FabricationError extends Error {
   }
 }
 
-export async function tailorCv(a: Application) {
+export async function tailorCv(a: Application, onProgress: (e: CvProgress) => void = () => {}) {
   const jobText = jobTextOf(a);
   if (!a.description && !a.responsibilities) {
     throw new Error("Esta aplicação não tem a descrição da vaga. Edite e cole a descrição (ou use Buscar dados) antes de adaptar o CV.");
   }
+  onProgress({ step: "analyze" });
   const { cv, analysis } = await analyzeApplication(a);
   const header = cvHeader(cv.markdown);
   const context = buildContext(cv.markdown, cv.facts, jobText, a);
@@ -47,18 +49,22 @@ export async function tailorCv(a: Application) {
   let model: string | undefined;
   // One retry: on violations, the model gets the exact list of what it must remove.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const reply = await askGemini(instruction + feedback, context, model);
+    const reply = await askGemini(instruction + feedback, context, model, (e) =>
+      onProgress(e.kind === "try" ? { step: "ai", model: e.model, attempt: attempt + 1 } : { step: "ai-failed", model: e.model, reason: e.reason ?? "" }),
+    );
     model = reply.model;
     let answer: AiAnswer;
     try {
       answer = parseJsonAnswer<AiAnswer>(reply.text);
       if (typeof answer.cv !== "string" || !answer.cv.trim()) throw new Error("sem o campo cv");
     } catch (err) {
+      onProgress({ step: "invalid-json" });
       if (attempt === 1) throw new Error(`A IA retornou uma resposta ilegível (${err instanceof Error ? err.message : err}).`);
       feedback = "\n\nYOUR PREVIOUS ANSWER WAS NOT VALID JSON. Answer with ONLY the JSON object, escaping newlines inside strings as \\n.";
       continue;
     }
 
+    onProgress({ step: "validate" });
     const markdown = withHeader(answer.cv.trim(), header) + "\n";
     const bridges = (answer.bridges ?? []).filter((b) => analysis.missing.includes(b.tech));
     violations = [
@@ -81,11 +87,14 @@ export async function tailorCv(a: Application) {
         .values(values)
         .onConflictDoUpdate({ target: tailoredCvs.applicationId, set: values })
         .returning();
+      onProgress({ step: "pdf" });
       // Keep the exact file on disk and record it as the CV sent to this job.
       const cvPath = await saveTailoredPdf(a.id, a.company, await renderPdf(cvDocument(markdown, cv.language)));
       await db.update(applications).set({ cvPath, updatedAt: new Date() }).where(eq(applications.id, a.id));
+      onProgress({ step: "done" });
       return { ...row, cvPath };
     }
+    onProgress({ step: "rejected", violations });
     feedback = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED because it contained information not present in CANDIDATE FACTS:\n${violations
       .map((v) => `- ${v}`)
       .join("\n")}\nRemove every one of these and answer again.`;

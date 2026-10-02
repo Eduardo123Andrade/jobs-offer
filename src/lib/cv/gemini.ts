@@ -18,7 +18,12 @@ export type GeminiAnswer = { text: string; model: string };
  * Asks Gemini, trying the primary model first and the fallback if it fails or times out.
  * `prefer` lets a follow-up call go straight to the model that answered before.
  */
-export async function askGemini(instruction: string, context: string, prefer?: string): Promise<GeminiAnswer> {
+export async function askGemini(
+  instruction: string,
+  context: string,
+  prefer?: string,
+  onEvent?: (e: { kind: "try" | "failed"; model: string; reason?: string }) => void,
+): Promise<GeminiAnswer> {
   const models: { model?: string; timeout: number }[] = [
     { model: PRIMARY, timeout: PRIMARY_TIMEOUT_MS },
     ...(FALLBACK && FALLBACK !== PRIMARY ? [{ model: FALLBACK, timeout: FALLBACK_TIMEOUT_MS }] : []),
@@ -27,10 +32,13 @@ export async function askGemini(instruction: string, context: string, prefer?: s
 
   const errors: string[] = [];
   for (const { model, timeout } of models) {
+    onEvent?.({ kind: "try", model: label(model) });
     try {
       return { text: await callOnce(instruction, context, model, timeout), model: label(model) };
     } catch (err) {
-      errors.push(`${label(model)}: ${err instanceof Error ? err.message : err}`);
+      const reason = err instanceof Error ? err.message : String(err);
+      errors.push(`${label(model)}: ${reason}`);
+      onEvent?.({ kind: "failed", model: label(model), reason });
     }
   }
   throw new Error(`Gemini falhou. ${errors.join(" | ")}`);
