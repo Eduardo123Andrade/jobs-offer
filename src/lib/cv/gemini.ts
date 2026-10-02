@@ -5,12 +5,19 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const BIN = process.env.GEMINI_BIN ?? "gemini";
-// Primary: GEMINI_MODEL or the CLI's default (best quality, but often overloaded → slow 503 retries).
-// Fallback: a lighter model that answers in seconds. The anti-fabrication check applies to both.
-const PRIMARY = process.env.GEMINI_MODEL || undefined;
-const FALLBACK = process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash-lite";
-const PRIMARY_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS ?? 150_000);
-const FALLBACK_TIMEOUT_MS = 120_000;
+// Primary: flash-lite, which answers in 30s–1.5min. Fallback: GEMINI_FALLBACK_MODEL or the CLI's default
+// (stronger, but often overloaded → minutes of 503 retries). The anti-fabrication check applies to both.
+const PRIMARY = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const FALLBACK = process.env.GEMINI_FALLBACK_MODEL || undefined; // undefined → CLI default
+const PRIMARY_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS ?? 180_000);
+const FALLBACK_TIMEOUT_MS = 180_000;
+
+// Free-tier keys have a daily quota per model. Once a model answers 429, skip it for a while instead of
+// paying its failure on every generation. In memory only: a server restart forgets it.
+const QUOTA_COOLDOWN_MS = 60 * 60 * 1000;
+const exhaustedUntil = new Map<string, number>();
+
+class QuotaError extends Error {}
 
 export type GeminiAnswer = { text: string; model: string };
 
@@ -26,19 +33,25 @@ export async function askGemini(
 ): Promise<GeminiAnswer> {
   const models: { model?: string; timeout: number }[] = [
     { model: PRIMARY, timeout: PRIMARY_TIMEOUT_MS },
-    ...(FALLBACK && FALLBACK !== PRIMARY ? [{ model: FALLBACK, timeout: FALLBACK_TIMEOUT_MS }] : []),
+    ...(FALLBACK !== PRIMARY ? [{ model: FALLBACK, timeout: FALLBACK_TIMEOUT_MS }] : []),
   ];
   if (prefer) models.sort((a, b) => Number(label(b.model) === prefer) - Number(label(a.model) === prefer));
 
   const errors: string[] = [];
   for (const { model, timeout } of models) {
-    onEvent?.({ kind: "try", model: label(model) });
+    const name = label(model);
+    if ((exhaustedUntil.get(name) ?? 0) > Date.now()) {
+      errors.push(`${name}: cota diária esgotada (pulado)`);
+      continue;
+    }
+    onEvent?.({ kind: "try", model: name });
     try {
-      return { text: await callOnce(instruction, context, model, timeout), model: label(model) };
+      return { text: await callOnce(instruction, context, model, timeout), model: name };
     } catch (err) {
+      if (err instanceof QuotaError) exhaustedUntil.set(name, Date.now() + QUOTA_COOLDOWN_MS);
       const reason = err instanceof Error ? err.message : String(err);
-      errors.push(`${label(model)}: ${reason}`);
-      onEvent?.({ kind: "failed", model: label(model), reason });
+      errors.push(`${name}: ${reason}`);
+      onEvent?.({ kind: "failed", model: name, reason });
     }
   }
   throw new Error(`Gemini falhou. ${errors.join(" | ")}`);
@@ -55,11 +68,17 @@ async function callOnce(instruction: string, context: string, model: string | un
   const args = ["-p", instruction, "-o", "json", "--skip-trust", ...(model ? ["-m", model] : [])];
   try {
     const { stdout, stderr, code } = await run(BIN, args, context, cwd, timeout);
-    let parsed: { response?: string; error?: { message?: string } };
+    let parsed: { response?: string; error?: { message?: string; code?: number } };
     try {
-      parsed = JSON.parse(stdout);
+      // On errors the CLI prints its JSON to stderr after a debug dump; start at the JSON object itself.
+      const out = stdout.trim() ? stdout : stderr;
+      const start = out.search(/^\{\s*\n\s*"session_id"/m);
+      parsed = JSON.parse(start === -1 ? out : out.slice(start));
     } catch {
       throw new Error(`saiu com código ${code}: ${(stderr || stdout).trim().slice(-300)}`);
+    }
+    if (parsed.error?.code === 429) {
+      throw new QuotaError("cota diária esgotada para este modelo (renova por volta das 4h–5h, horário de Brasília)");
     }
     if (parsed.error) throw new Error(parsed.error.message ?? "erro desconhecido");
     if (!parsed.response) throw new Error("não retornou resposta");
