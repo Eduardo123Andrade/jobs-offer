@@ -5,6 +5,7 @@ import { ApplicationsSection } from "@/components/dashboard";
 import { Filters } from "@/components/filters";
 import { StatCards } from "@/components/stat-cards";
 import { computeStats, listApplications, listDistinct } from "@/lib/applications";
+import { listCvFiles } from "@/lib/cv/source";
 import { withFlags } from "@/lib/follow-up";
 import { parseFilters } from "@/lib/validation";
 
@@ -12,10 +13,11 @@ export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const filters = parseFilters(await searchParams);
-  const [rows, locations, platforms] = await Promise.all([
+  const [rows, locations, platforms, cvFiles] = await Promise.all([
     listApplications(filters),
     listDistinct("location"),
     listDistinct("platform"),
+    listCvFiles(),
   ]);
   const stats = computeStats(rows);
 
@@ -36,7 +38,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       </Suspense>
       <StatCards stats={stats} />
       <Charts stats={stats} />
-      <ApplicationsSection rows={withFlags(rows)} platforms={platforms} locations={locations} />
+      <ApplicationsSection rows={withFlags(rows)} platforms={platforms} locations={locations} cvFiles={cvFiles} />
     </main>
   );
 }

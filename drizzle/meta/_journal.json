@@ -22,6 +22,20 @@
       "when": 1790951963695,
       "tag": "0002_overjoyed_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790953590579,
+      "tag": "0003_sturdy_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790955772013,
+      "tag": "0004_conscious_the_hand",
+      "breakpoints": true
     }
   ]
 }

@@ -50,6 +50,17 @@ Ao colar o link da vaga no formulário (ou clicar em **Buscar dados**), o servid
 
 Tecnologias são detectadas por dicionário (`src/lib/scrape/extract.ts`, lista `TECHS`) e responsabilidades pela seção "Responsabilidades / Atividades / O que você vai fazer" da descrição. Tudo é editável antes de salvar.
 
+## CV adaptado por vaga
+
+Em cada aplicação, o botão **CV** abre `/aplicacoes/:id/cv`:
+
+1. **Compatibilidade (sem IA):** compara as tecnologias da vaga com o seu CV e separa o que você tem, o que só está no CV do outro idioma e o que você não tem.
+2. **Adaptar com IA:** o [Gemini CLI](https://github.com/google-gemini/gemini-cli) reescreve resumo, ordem de skills e bullets com o vocabulário da vaga, e escreve notas (fora do CV) sobre como sua experiência ajuda a aprender o que falta.
+3. **Validação anti-invenção:** o resultado é rejeitado (com uma nova tentativa) se tiver tecnologia, número, experiência ou termo da vaga que não esteja nos seus CVs (`src/lib/cv/validate.ts`).
+4. **PDF** no mesmo layout de uma coluna do CV original, via `wkhtmltopdf`.
+
+Requisitos: `npm i -g @google/gemini-cli` + login (`gemini` uma vez), `wkhtmltopdf` no PATH, e os CVs em markdown em `cv/cv-en.md` e `cv/cv-pt.md` (pasta fora do git). O idioma do CV segue o idioma da vaga. Segredos e opções ficam em `.env.local` (fora do git); veja `.env.example` (`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `CV_DIR`...).
+
 ## API
 
 | Método | Rota | |
@@ -59,3 +70,6 @@ Tecnologias são detectadas por dicionário (`src/lib/scrape/extract.ts`, lista 
 | GET / PATCH / DELETE | `/api/applications/:id` | Lê / atualiza parcialmente / remove |
 | GET | `/api/stats?<mesmos filtros>` | Métricas |
 | POST | `/api/scrape` `{ "url": "..." }` | Extrai dados de uma vaga |
+| GET / POST | `/api/profile-notes`, PATCH / DELETE `/api/profile-notes/:id` | Blocos do "Sobre mim" |
+| POST | `/api/applications/:id/tailored-cv` | Gera o CV adaptado (Gemini CLI) |
+| GET | `/api/applications/:id/tailored-cv/pdf` | Baixa o CV adaptado em PDF |

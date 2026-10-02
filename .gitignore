@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 !.env.development
 !.env.production
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+
+# personal CV files
+/cv/

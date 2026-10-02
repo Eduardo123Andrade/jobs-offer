@@ -54,3 +54,17 @@ body {
 @utility label {
   @apply mb-1 block text-xs font-medium text-muted;
 }
+
+/* Tailored CV preview: mirrors the PDF layout (src/lib/cv/pdf.ts) at screen size. */
+.cv-preview { font-size: 13px; line-height: 1.5; }
+.cv-preview h1 { font-size: 24px; font-weight: 700; color: #0f172a; }
+.cv-preview h1 + p { font-size: 15px; color: #475569; }
+.cv-preview h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0f172a; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; margin: 16px 0 8px; }
+.cv-preview h3 { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 10px; }
+.cv-preview h3 + p em { font-style: normal; color: #64748b; font-size: 12px; }
+.cv-preview p { margin-bottom: 4px; }
+.cv-preview ul { list-style: disc; padding-left: 18px; margin-bottom: 4px; }
+.cv-preview li { margin-bottom: 2px; }
+.cv-preview strong { font-weight: 600; color: #0f172a; }
+.cv-preview a { color: #2563eb; }
+.cv-preview hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }

@@ -19,6 +19,8 @@ type Props = {
   application?: Application | null;
   platforms: string[];
   locations: string[];
+  /** CV files available in the CV folder, relative paths. */
+  cvFiles: string[];
 };
 
 type FieldErrors = Record<string, string[] | undefined>;
@@ -43,7 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const isHttpUrl = (v: string) => /^https?:\/\/\S+\.\S+/.test(v.trim());
 
-export function ApplicationForm({ open, onClose, application, platforms, locations }: Props) {
+export function ApplicationForm({ open, onClose, application, platforms, locations, cvFiles }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -224,6 +226,17 @@ export function ApplicationForm({ open, onClose, application, platforms, locatio
             <label className="label" htmlFor="contactEmail">E-mail do contato</label>
             <input id="contactEmail" name="contactEmail" type="email" className="input" defaultValue={a?.contactEmail ?? ""} />
             {err("contactEmail")}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="cvPath">CV enviado</label>
+            <select id="cvPath" name="cvPath" className="input" defaultValue={a?.cvPath ?? ""}>
+              <option value="">—</option>
+              {/* Keep a stored path selectable even if the file was moved or deleted. */}
+              {a?.cvPath && !cvFiles.includes(a.cvPath) && <option value={a.cvPath}>{a.cvPath} (arquivo não encontrado)</option>}
+              {cvFiles.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <p className="mt-1 text-xs text-muted">Arquivos da pasta cv/. Ao gerar um CV adaptado, ele é salvo e escolhido aqui automaticamente.</p>
           </div>
 
           <div className="sm:col-span-2">

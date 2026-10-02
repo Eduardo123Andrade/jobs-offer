@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useState, useTransition } from "react";
 import { STALE_AFTER_DAYS, STATUSES, STATUS_COLORS, STATUS_LABELS, WORK_MODEL_LABELS, type Status } from "@/lib/constants";
@@ -102,13 +103,18 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
                     {a.url}
                   </a>
                   {a.technologies.length > 0 && <TechChips techs={a.technologies.slice(0, 6)} more={a.technologies.length - 6} />}
-                  {(a.salary || a.contactName || a.notes) && (
+                  {(a.salary || a.contactName || a.notes || a.cvPath) && (
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted">
                       {a.salary && <span>💰 {a.salary}</span>}
                       {a.contactName && (
                         <span>
                           👤 {a.contactEmail ? <a className="hover:underline" href={`mailto:${a.contactEmail}`}>{a.contactName}</a> : a.contactName}
                         </span>
+                      )}
+                      {a.cvPath && (
+                        <a className="hover:underline" href={`/api/applications/${a.id}/cv-file`} target="_blank" rel="noreferrer" title={`cv/${a.cvPath}`}>
+                          📄 {a.cvPath.split("/").pop()}
+                        </a>
                       )}
                       {a.notes && <span className="truncate" title={a.notes}>📝 {a.notes}</span>}
                     </div>
@@ -164,6 +170,9 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
                     </span>
                   ) : (
                     <span className="inline-flex gap-1">
+                      <Link className="btn-ghost h-8 px-2.5" href={`/aplicacoes/${a.id}/cv`} title="Adaptar CV para esta vaga">
+                        CV
+                      </Link>
                       <button className="btn-ghost h-8 px-2.5" onClick={() => onEdit(a)}>
                         Editar
                       </button>

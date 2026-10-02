@@ -5,10 +5,10 @@ import type { ApplicationRow } from "@/lib/follow-up";
 import { ApplicationForm } from "./application-form";
 import { ApplicationsTable } from "./applications-table";
 
-type Props = { rows: ApplicationRow[]; platforms: string[]; locations: string[] };
+type Props = { rows: ApplicationRow[]; platforms: string[]; locations: string[]; cvFiles: string[] };
 
 /** Owns the create/edit dialog state shared by the header button and the table. */
-export function ApplicationsSection({ rows, platforms, locations }: Props) {
+export function ApplicationsSection({ rows, platforms, locations, cvFiles }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
 
@@ -40,6 +40,7 @@ export function ApplicationsSection({ rows, platforms, locations }: Props) {
         application={editing}
         platforms={platforms}
         locations={locations}
+        cvFiles={cvFiles}
       />
     </section>
   );

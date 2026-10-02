@@ -27,6 +27,7 @@ export const applicationInput = z.object({
     .pipe(z.email("E-mail inválido").nullable())
     .nullish(),
   notes: optionalText,
+  cvPath: optionalText,
   description: optionalText,
   responsibilities: optionalText,
   // Accepts an array or the form's comma-separated string.

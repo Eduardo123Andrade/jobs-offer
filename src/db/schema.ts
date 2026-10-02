@@ -1,4 +1,4 @@
-import { date, index, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { STATUSES, WORK_MODELS } from "@/lib/constants";
 
 export const statusEnum = pgEnum("application_status", STATUSES);
@@ -20,6 +20,8 @@ export const applications = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     notes: text("notes"),
+    /** CV file sent for this application, relative to the CV folder (CV_DIR, default ./cv). */
+    cvPath: text("cv_path"),
     description: text("description"),
     responsibilities: text("responsibilities"),
     technologies: text("technologies").array().notNull().default([]),
@@ -44,3 +46,24 @@ export const profileNotes = pgTable("profile_notes", {
 });
 
 export type ProfileNote = typeof profileNotes.$inferSelect;
+
+export type CvBridge = { tech: string; basedOn: string[]; pitch: string; studyPlan: string };
+export type CvAnalysis = { language: "en" | "pt"; jobTechs: string[]; matched: string[]; fromOtherCv: string[]; missing: string[]; score: number };
+
+/** Latest CV tailored for an application (one per application, regenerating replaces it). */
+export const tailoredCvs = pgTable("tailored_cvs", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id")
+    .notNull()
+    .unique()
+    .references(() => applications.id, { onDelete: "cascade" }),
+  language: text("language").$type<CvAnalysis["language"]>().notNull(),
+  markdown: text("markdown").notNull(),
+  bridges: jsonb("bridges").$type<CvBridge[]>().notNull().default([]),
+  changes: jsonb("changes").$type<string[]>().notNull().default([]),
+  analysis: jsonb("analysis").$type<CvAnalysis>().notNull(),
+  model: text("model").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type TailoredCv = typeof tailoredCvs.$inferSelect;
