@@ -54,7 +54,25 @@ function run(cmd, args, opts = {}) {
 
 const npx = (args) => run("pnpm", ["exec", ...args]);
 
+function isRunning(service) {
+  return new Promise((resolve) => {
+    const child = spawn("docker", ["compose", "ps", "--status", "running", "-q", service], { env });
+    let out = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.on("exit", () => resolve(out.trim() !== ""));
+    child.on("error", () => resolve(false));
+  });
+}
+
+// Only stop the container if this run started it, so a second instance (or one that
+// fails, e.g. port in use) doesn't pull the database out from under the first.
+let startedDatabase = false;
+
 async function stopDatabase() {
+  if (!startedDatabase) {
+    log(`${mode.service} já estava rodando antes; mantendo o container ligado.`);
+    return;
+  }
   log(`parando o container ${mode.service}...`);
   // Own process group, so a second Ctrl+C can't interrupt the stop.
   await run("docker", ["compose", "stop", mode.service], { detached: true });
@@ -75,6 +93,7 @@ async function main() {
     await run("docker", ["volume", "create", mode.volume], { stdio: "ignore" });
   }
 
+  startedDatabase = !(await isRunning(mode.service));
   log(`subindo ${mode.service}...`);
   let code = await run("docker", ["compose", "up", "-d", "--wait", mode.service]);
   if (code !== 0 || shuttingDown) return code;
