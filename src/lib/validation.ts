@@ -27,6 +27,13 @@ export const applicationInput = z.object({
     .pipe(z.email("E-mail inválido").nullable())
     .nullish(),
   notes: optionalText,
+  description: optionalText,
+  responsibilities: optionalText,
+  // Accepts an array or the form's comma-separated string.
+  technologies: z
+    .union([z.array(z.string()), z.string()])
+    .transform((v) => [...new Set((typeof v === "string" ? v.split(",") : v).map((t) => t.trim()).filter(Boolean))])
+    .optional(),
   followUpAt: isoDate.nullish().or(z.literal("").transform(() => null)),
 });
 

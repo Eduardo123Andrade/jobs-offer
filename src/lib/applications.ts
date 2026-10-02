@@ -22,6 +22,7 @@ function buildWhere(f: Filters): SQL | undefined {
         ilike(applications.role, term),
         ilike(applications.notes, term),
         ilike(applications.url, term),
+        sql`array_to_string(${applications.technologies}, ' ') ilike ${term}`,
       ),
     );
   }

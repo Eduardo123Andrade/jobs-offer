@@ -57,6 +57,16 @@ const STATUS_WEIGHTS: Record<Status, number> = {
   saved: 2, applied: 10, in_review: 5, interview: 4, technical_test: 2, offer: 1, rejected: 8, withdrawn: 1,
 };
 const RECRUITERS = ["Ana Souza", "Bruno Lima", "Carla Mendes", "Diego Rocha", "Fernanda Alves"];
+const TECH_POOL = ["React", "TypeScript", "JavaScript", "Next.js", "Node.js", "NestJS", "PostgreSQL", "AWS", "Docker", "GraphQL", "Jest", "Tailwind", "Python", "Kubernetes", "Redux", "CI/CD"];
+const RESPONSIBILITIES = [
+  "Desenvolver e manter interfaces web com foco em performance e acessibilidade",
+  "Participar de code reviews e definir boas práticas com o time",
+  "Integrar o frontend com APIs REST e GraphQL",
+  "Escrever testes automatizados unitários e de integração",
+  "Colaborar com Produto e Design na definição de novas funcionalidades",
+  "Monitorar e corrigir problemas em produção",
+  "Evoluir a arquitetura de microsserviços da plataforma",
+];
 const NOTES = ["Stack: React + Next.js", "Vaga com inglês avançado", "Benefícios bons, sem PLR", "Processo com 4 etapas", "Recrutadora respondeu rápido"];
 
 // Deterministic PRNG so every reset produces the same data.
@@ -64,6 +74,7 @@ let seed = 42;
 const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const pick = <T,>(xs: readonly T[]) => xs[Math.floor(rand() * xs.length)];
 const maybe = <T,>(p: number, v: () => T) => (rand() < p ? v() : null);
+const sample = <T,>(xs: readonly T[], n: number) => [...xs].sort(() => rand() - 0.5).slice(0, n);
 
 function weightedStatus(): Status {
   const total = Object.values(STATUS_WEIGHTS).reduce((a, b) => a + b, 0);
@@ -98,6 +109,8 @@ function fakeApplications(n: number): NewApplication[] {
       contactName: recruiter,
       contactEmail: recruiter && `${recruiter.split(" ")[0].toLowerCase()}@${slug}.com.br`,
       notes: maybe(0.35, () => pick(NOTES)),
+      technologies: sample(TECH_POOL, 2 + Math.floor(rand() * 5)),
+      responsibilities: maybe(0.7, () => sample(RESPONSIBILITIES, 3 + Math.floor(rand() * 3)).map((r) => `• ${r}`).join("\n")),
       followUpAt: maybe(0.35, () => isoDate(daysAgo(Math.floor(rand() * 20) - 10))),
       statusChangedAt: daysAgo(statusDaysAgo),
       createdAt: daysAgo(appliedDaysAgo),

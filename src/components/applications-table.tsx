@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { STALE_AFTER_DAYS, STATUSES, STATUS_COLORS, STATUS_LABELS, WORK_MODEL_LABELS, type Status } from "@/lib/constants";
 import type { ApplicationRow } from "@/lib/follow-up";
 import { formatDate, hostname, timeAgo } from "@/lib/format";
@@ -15,6 +15,15 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggleExpanded = (id: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [, startTransition] = useTransition();
 
   async function mutate(id: number, init: RequestInit) {
@@ -59,14 +68,29 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
         </thead>
         <tbody>
           {rows.map((a) => {
+            const hasDetails = Boolean(a.responsibilities || a.notes || a.technologies.length > 6);
+            const isExpanded = expanded.has(a.id);
             return (
+              <Fragment key={a.id}>
               <tr
-                key={a.id}
                 className={`border-b border-border last:border-0 hover:bg-background/60 ${busyId === a.id ? "opacity-50" : ""}`}
               >
                 <td className="max-w-80 px-4 py-3">
-                  <div className="truncate font-medium">
-                    {a.role || a.company ? [a.role, a.company].filter(Boolean).join(" · ") : hostname(a.url)}
+                  <div className="flex items-center gap-1">
+                    {hasDetails && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(a.id)}
+                        aria-expanded={isExpanded}
+                        aria-label={isExpanded ? "Ocultar detalhes" : "Ver responsabilidades e detalhes"}
+                        className={`shrink-0 cursor-pointer text-muted transition-transform hover:text-foreground ${isExpanded ? "rotate-90" : ""}`}
+                      >
+                        ▸
+                      </button>
+                    )}
+                    <span className="truncate font-medium">
+                      {a.role || a.company ? [a.role, a.company].filter(Boolean).join(" · ") : hostname(a.url)}
+                    </span>
                   </div>
                   <a
                     href={a.url}
@@ -77,6 +101,7 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
                   >
                     {a.url}
                   </a>
+                  {a.technologies.length > 0 && <TechChips techs={a.technologies.slice(0, 6)} more={a.technologies.length - 6} />}
                   {(a.salary || a.contactName || a.notes) && (
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted">
                       {a.salary && <span>💰 {a.salary}</span>}
@@ -149,10 +174,54 @@ export function ApplicationsTable({ rows, onEdit }: Props) {
                   )}
                 </td>
               </tr>
+              {isExpanded && (
+                <tr className="border-b border-border bg-background/40 last:border-0">
+                  <td colSpan={7} className="px-4 py-4">
+                    <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+                      <div>
+                        <h4 className="label">Responsabilidades</h4>
+                        {a.responsibilities ? (
+                          <p className="text-sm leading-relaxed whitespace-pre-line">{a.responsibilities}</p>
+                        ) : (
+                          <p className="text-sm text-muted">—</p>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        {a.technologies.length > 0 && (
+                          <div>
+                            <h4 className="label">Tecnologias</h4>
+                            <TechChips techs={a.technologies} />
+                          </div>
+                        )}
+                        {a.notes && (
+                          <div>
+                            <h4 className="label">Notas</h4>
+                            <p className="text-sm whitespace-pre-line">{a.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             );
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function TechChips({ techs, more = 0 }: { techs: string[]; more?: number }) {
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {techs.map((t) => (
+        <span key={t} className="rounded border border-border bg-background px-1.5 py-px text-[11px] text-muted">
+          {t}
+        </span>
+      ))}
+      {more > 0 && <span className="px-1 text-[11px] text-muted">+{more}</span>}
     </div>
   );
 }

@@ -37,6 +37,19 @@ O banco de prod usa um volume Docker **externo** (`jobs-offer-pgdata-prod`): nem
 - **Métricas:** totais, taxa de resposta, % que chegou à entrevista, gráficos por semana / status / plataforma — refletem os filtros ativos.
 - **Follow-up:** destaque para follow-ups vencidos e aplicações abertas sem mudança de status há 14+ dias (`STALE_AFTER_DAYS` em `src/lib/constants.ts`).
 
+## Preenchimento automático
+
+Ao colar o link da vaga no formulário (ou clicar em **Buscar dados**), o servidor baixa a página e preenche **só os campos vazios**: plataforma, empresa, cargo, localização, modelo de trabalho, salário, tecnologias, resumo das responsabilidades e a descrição completa (guardada para quando a vaga sair do ar).
+
+| Fonte | Como |
+| --- | --- |
+| LinkedIn | endpoint público `jobs-guest` (sem login) |
+| Gupy | dados estruturados da página (`__NEXT_DATA__`), incl. responsabilidades separadas |
+| Outros (Greenhouse, Lever, sites de carreira...) | JSON-LD `JobPosting`, depois Open Graph |
+| Indeed / Glassdoor | geralmente bloqueiam robôs → só a plataforma é preenchida |
+
+Tecnologias são detectadas por dicionário (`src/lib/scrape/extract.ts`, lista `TECHS`) e responsabilidades pela seção "Responsabilidades / Atividades / O que você vai fazer" da descrição. Tudo é editável antes de salvar.
+
 ## API
 
 | Método | Rota | |
@@ -45,3 +58,4 @@ O banco de prod usa um volume Docker **externo** (`jobs-offer-pgdata-prod`): nem
 | POST | `/api/applications` | Cria |
 | GET / PATCH / DELETE | `/api/applications/:id` | Lê / atualiza parcialmente / remove |
 | GET | `/api/stats?<mesmos filtros>` | Métricas |
+| POST | `/api/scrape` `{ "url": "..." }` | Extrai dados de uma vaga |
