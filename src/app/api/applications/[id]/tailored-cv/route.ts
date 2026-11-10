@@ -5,7 +5,7 @@ import { progressLabel, type CvStreamLine } from "@/lib/cv/progress";
 import { FabricationError, tailorCv } from "@/lib/cv/tailor";
 
 /**
- * Generates (or regenerates) the tailored CV with the Gemini CLI. Takes from ~20s to a few minutes, so
+ * Generates (or regenerates) the tailored CV with the AI CLI chosen by CV_AI_PROVIDER. Takes from ~20s to a few minutes, so
  * progress is streamed as NDJSON (one CvStreamLine per line) and also logged to the server console.
  */
 export async function POST(_req: NextRequest, ctx: RouteContext<"/api/applications/[id]/tailored-cv">) {

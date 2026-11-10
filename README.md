@@ -61,7 +61,7 @@ Cada bloco tem **"Usar no CV adaptado"** (marcado por padrão): marcado, o texto
 Em cada aplicação, o botão **CV** abre `/aplicacoes/:id/cv`:
 
 1. **Compatibilidade (sem IA):** compara as tecnologias da vaga com as suas e separa o que você tem, o que está só no CV do outro idioma ou no "Sobre mim" (a IA vai incluir) e o que você não tem (nunca entra no CV).
-2. **Adaptar com IA:** o [Gemini CLI](https://github.com/google-gemini/gemini-cli) reescreve resumo, ordem de skills e bullets com o vocabulário da vaga, no idioma da vaga. Para cada tecnologia que falta, escreve uma nota (fora do CV) de como sua experiência ajuda a aprendê-la, com um plano de estudo.
+2. **Adaptar com IA:** o [Gemini CLI](https://github.com/google-gemini/gemini-cli) ou o [Claude Code](https://docs.claude.com/en/docs/claude-code) (escolha com `CV_AI_PROVIDER`) reescreve resumo, ordem de skills e bullets com o vocabulário da vaga, no idioma da vaga. Para cada tecnologia que falta, escreve uma nota (fora do CV) de como sua experiência ajuda a aprendê-la, com um plano de estudo.
 3. **Progresso ao vivo:** cada etapa aparece na página com cronômetro (e no terminal do `pnpm dev` como `[cv #id] ...`).
 4. **Validação anti-invenção** (`src/lib/cv/validate.ts`):
    - **bloqueia** o CV (a IA recebe a lista e tenta mais uma vez; se insistir, nada é salvo) se tiver tecnologia, número/métrica, experiência ou termo da vaga que não esteja nos seus fatos;
@@ -71,16 +71,19 @@ Em cada aplicação, o botão **CV** abre `/aplicacoes/:id/cv`:
 
 **Fatos** = `cv/cv-en.md` + `cv/cv-pt.md` + blocos do "Sobre mim" marcados. A pasta `cv/` fica fora do git.
 
-**Modelos:** `gemini-3.5-flash-lite` primeiro (de 30s a ~1,5 min); se falhar ou passar de 3 min, o modelo padrão do CLI (mais forte, mas costuma estar sobrecarregado e levar minutos). No plano gratuito cada modelo tem cota diária: quando acaba (erro 429), o app avisa "cota diária esgotada" e pula aquele modelo por 1 hora.
+**Modelos (Gemini):** `gemini-3.5-flash-lite` primeiro (de 30s a ~1,5 min); se falhar ou passar de 3 min, o modelo padrão do CLI (mais forte, mas costuma estar sobrecarregado e levar minutos). No plano gratuito cada modelo tem cota diária: quando acaba (erro 429), o app avisa "cota diária esgotada" e pula aquele modelo por 1 hora.
+
+**Modelos (Claude):** `CLAUDE_MODEL` (padrão `sonnet`), e `CLAUDE_FALLBACK_MODEL` se definido. Roda sem ferramentas nem MCP, só como completação, usando o login da sua assinatura. Limite de uso atingido (429) também pula o modelo por 1 hora.
 
 ### Configuração
 
 ```bash
 npm i -g @google/gemini-cli   # depois rode `gemini` uma vez para logar (ou use GEMINI_API_KEY)
+npm i -g @anthropic-ai/claude-code   # se for usar CV_AI_PROVIDER=claude; rode `claude` uma vez para logar
 cp .env.example .env.local     # segredos e opções; .env.local fica fora do git
 ```
 
-Precisa também do `wkhtmltopdf` no PATH e dos CVs em markdown em `cv/cv-en.md` e `cv/cv-pt.md`. Variáveis em `.env.example`: `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `GEMINI_TIMEOUT_MS`, `CV_DIR`, `WKHTMLTOPDF_BIN`.
+Precisa também do `wkhtmltopdf` no PATH e dos CVs em markdown em `cv/cv-en.md` e `cv/cv-pt.md`. Variáveis em `.env.example`: `CV_AI_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `GEMINI_TIMEOUT_MS`, `CLAUDE_MODEL`, `CLAUDE_FALLBACK_MODEL`, `CLAUDE_TIMEOUT_MS`, `CLAUDE_BIN`, `CV_DIR`, `WKHTMLTOPDF_BIN`.
 
 ## API
 
@@ -92,6 +95,6 @@ Precisa também do `wkhtmltopdf` no PATH e dos CVs em markdown em `cv/cv-en.md` 
 | GET | `/api/stats?<mesmos filtros>` | Métricas |
 | POST | `/api/scrape` `{ "url": "..." }` | Extrai dados de uma vaga |
 | GET / POST | `/api/profile-notes`, PATCH / DELETE `/api/profile-notes/:id` | Blocos do "Sobre mim" |
-| POST | `/api/applications/:id/tailored-cv` | Gera o CV adaptado (Gemini CLI); resposta em NDJSON com o progresso |
+| POST | `/api/applications/:id/tailored-cv` | Gera o CV adaptado (Gemini ou Claude CLI); resposta em NDJSON com o progresso |
 | GET | `/api/applications/:id/tailored-cv/pdf` | Baixa o CV adaptado em PDF (409 se não passar na validação) |
 | GET | `/api/applications/:id/cv-file` | Abre o arquivo do CV enviado (`cvPath`) |

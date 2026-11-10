@@ -129,7 +129,7 @@ export function TailorCv({ applicationId, cvPath, hasJobText, analysis, tailored
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
           <button className="btn-primary" onClick={generate} disabled={generating || !hasJobText}>
-            {generating ? "Gerando com Gemini…" : tailored ? "Gerar de novo" : "Adaptar CV com IA"}
+            {generating ? "Gerando com IA…" : tailored ? "Gerar de novo" : "Adaptar CV com IA"}
           </button>
           {tailored && (
             <>

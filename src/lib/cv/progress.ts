@@ -21,7 +21,7 @@ export function progressLabel(e: CvProgress): string {
     case "analyze":
       return "Comparando a vaga com o seu CV";
     case "ai":
-      return `${e.attempt > 1 ? "Nova tentativa: pedindo" : "Pedindo"} ao Gemini (modelo ${e.model})…`;
+      return `${e.attempt > 1 ? "Nova tentativa: pedindo" : "Pedindo"} à IA (modelo ${e.model})…`;
     case "ai-failed":
       return `Modelo ${e.model} falhou: ${e.reason}`;
     case "validate":

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { applications, tailoredCvs, type Application, type CvBridge } from "@/db/schema";
 import { analyzeFit, detectLanguage } from "./analyze";
-import { askGemini, parseJsonAnswer } from "./gemini";
+import { askAi, modelTag, parseJsonAnswer } from "./ai";
 import type { CvProgress } from "./progress";
 import { cvDocument, renderPdf } from "./pdf";
 import { cvHeader, loadCv, saveTailoredPdf, withHeader } from "./source";
@@ -49,7 +49,7 @@ export async function tailorCv(a: Application, onProgress: (e: CvProgress) => vo
   let model: string | undefined;
   // One retry: on violations, the model gets the exact list of what it must remove.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const reply = await askGemini(instruction + feedback, context, model, (e) =>
+    const reply = await askAi(instruction + feedback, context, model, (e) =>
       onProgress(e.kind === "try" ? { step: "ai", model: e.model, attempt: attempt + 1 } : { step: "ai-failed", model: e.model, reason: e.reason ?? "" }),
     );
     model = reply.model;
@@ -79,7 +79,7 @@ export async function tailorCv(a: Application, onProgress: (e: CvProgress) => vo
         bridges,
         changes: answer.changes ?? [],
         analysis,
-        model: `gemini-cli:${model}`,
+        model: modelTag(model),
         createdAt: new Date(),
       };
       const [row] = await db
