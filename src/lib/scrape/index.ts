@@ -40,6 +40,7 @@ const PLATFORMS: [RegExp, string][] = [
   [/solides\.com\.br$/, "Sólides"],
   [/inhire\.app$/, "InHire"],
   [/kenoby\.com$/, "Kenoby"],
+  [/jobleads\.com$/, "JobLeads"],
 ];
 
 export function platformFromUrl(url: URL) {
@@ -47,8 +48,12 @@ export function platformFromUrl(url: URL) {
   return PLATFORMS.find(([re]) => re.test(host))?.[1] ?? "Site da empresa";
 }
 
+class BlockedError extends Error {}
+
 async function fetchText(url: string) {
   const res = await fetch(url, { headers: HEADERS, redirect: "follow", signal: AbortSignal.timeout(TIMEOUT_MS) });
+  // Anti-bot challenges (Cloudflare "Just a moment…") only let a real browser through.
+  if (res.headers.get("cf-mitigated") === "challenge") throw new BlockedError();
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return { html: await res.text(), finalUrl: res.url };
 }
@@ -239,6 +244,9 @@ export async function scrapeJob(rawUrl: string): Promise<ScrapeResult> {
 
     return { data: base, source: "url-only", warning: "Página sem dados da vaga reconhecíveis." };
   } catch (err) {
+    if (err instanceof BlockedError) {
+      return { data: base, source: "url-only", warning: "O site bloqueia leitura automática (proteção anti-bot). Cole a descrição da vaga manualmente." };
+    }
     const reason = err instanceof Error && err.name === "TimeoutError" ? "tempo esgotado" : err instanceof Error ? err.message : "erro";
     return { data: base, source: "url-only", warning: `Não foi possível ler a página (${reason}).` };
   }
